@@ -1,4 +1,5 @@
 import streamlit as st
+import uuid
 from langchain_core.messages import AIMessage, HumanMessage
 from src.agent import inicializar_agente
 
@@ -6,12 +7,13 @@ from src.agent import inicializar_agente
 st.set_page_config(page_title="Agente Redwood", page_icon="🕵️‍♂️")
 st.title("🕵️‍♂️ Agente Inteligente con Tools - Redwood")
 
-# 2. Configuración de la Memoria (IE3 e IE4)
-# Aquí separamos la memoria visual (para ti) de la memoria cognitiva (para la IA)
+# 2. Configuración de la Memoria
 if "mensajes" not in st.session_state:
-    st.session_state.mensajes = [] # Lo que se ve en pantalla
+    st.session_state.mensajes = [] 
 if "chat_history" not in st.session_state:
-    st.session_state.chat_history = [] # El cerebro del agente que recuerda el contexto
+    st.session_state.chat_history = [] 
+if "thread_id" not in st.session_state:
+    st.session_state.thread_id = str(uuid.uuid4()) # 🚀 NUEVO: ID de sesión único
 
 # 3. Barra lateral
 st.sidebar.header("⚙️ Configuración del Sistema")
@@ -27,6 +29,7 @@ if groq_api_key:
     if st.sidebar.button("🗑️ Resetear Memoria del Agente"):
         st.session_state.mensajes = []
         st.session_state.chat_history = []
+        st.session_state.thread_id = str(uuid.uuid4()) # 🚀 ¡Mata la memoria vieja y crea una nueva!
         st.rerun()
 
     st.markdown("---")
@@ -51,20 +54,18 @@ if groq_api_key:
         with st.chat_message("assistant"):
             with st.spinner("Pensando y tomando decisiones..."):
                 try:
-                    # Al invocar en LangGraph, le pasamos TODO el historial de una vez
-                    respuesta = agente_ejecutor.invoke({"messages": st.session_state.chat_history})
+                    config_memoria = {"configurable": {"thread_id": st.session_state.thread_id}}
                     
-                    # Extraer el último mensaje (la respuesta de la IA)
+                    respuesta = agente_ejecutor.invoke(
+                        {"messages": [HumanMessage(content=pregunta)]}, 
+                        config_memoria
+                    )
+                    
                     mensaje_ia = respuesta["messages"][-1]
                     texto_respuesta = mensaje_ia.content
                     
                     st.markdown(texto_respuesta)
-                    
-                    # Guardar respuesta visual
                     st.session_state.mensajes.append({"role": "assistant", "content": texto_respuesta})
-                    
-                    # Guardar en la Memoria Cognitiva (Para cumplir IE3 e IE4)
-                    st.session_state.chat_history.append(mensaje_ia)
 
                 except Exception as e:
                     st.error(f"Error en la ejecución del Agente: {e}")

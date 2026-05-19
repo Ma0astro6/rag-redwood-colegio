@@ -3,15 +3,15 @@
 Un agente virtual autónomo con arquitectura basada en grafos (LangGraph) desarrollado para automatizar la atención de consultas del colegio. El agente toma decisiones adaptativas, recupera información del reglamento oficial (RAG) y extrae datos dinámicos en tiempo real desde la web oficial.
 
 ## 🛠️ Arquitectura y Tecnologías
-Este proyecto fue adaptado para ejecutarse de forma **100% local y gratuita** en el procesamiento de datos, utilizando las siguientes herramientas:
+Este proyecto fue desarrollado utilizando una arquitectura de vanguardia en la nube y procesamiento local:
 
 * **Frontend y Memoria Visual:** Streamlit
-* **Orquestador de Agentes:** LangGraph (ReAct Agent)
-* **LLM (Cerebro):** `llama-3.1-8b-instant` (Vía Groq API)
+* **Orquestador de Agentes:** LangGraph (ReAct Agent con MemorySaver)
+* **LLM (Cerebro):** `llama-3.3-70b-versatile` (Vía Groq API)
 * **Embeddings:** `all-MiniLM-L6-v2` (Vía HuggingFace - Local)
-* **Base de Datos Vectorial:** FAISS (Local)
+* **Base de Datos Vectorial:** MongoDB Atlas (Cloud Vector Search)
 * **Navegación Autónoma (Web Scraping):** Requests + BeautifulSoup4
-* **Procesamiento de Documentos:** PyPDF2
+* **Procesamiento de Documentos:** PyPDF2 y python-docx
 
 ## 📂 Estructura del Proyecto
 
@@ -23,7 +23,7 @@ El proyecto separa la capa de presentación de la lógica de negocio:
 │   └── reglamento.pdf      # Documento base para el RAG
 ├── src/                    # Lógica del Backend
 │   ├── agent.py            # Configuración del grafo (LLM) y System Prompt
-│   └── tools.py            # Herramientas del agente (FAISS Retriever y Web Scraper)
+│   └── tools.py            # Herramientas del agente (MongoDB Retriever y Web Scraper)
 ├── app.py                  # Interfaz gráfica y gestión de memoria cognitiva
 ├── requirements.txt        # Dependencias del proyecto
 └── README.md               # Documentación
