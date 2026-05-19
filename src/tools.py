@@ -23,7 +23,9 @@ embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-
 vectorstore = MongoDBAtlasVectorSearch(
     collection=coleccion_mongo,
     embedding=embeddings,
-    index_name="vector_index"
+    index_name="vector_index",
+    text_key="text",           
+    embedding_key="embedding"  
 )
 
 # 2. Carga Inteligente (Sube los archivos solo 1 vez)
@@ -48,13 +50,26 @@ try:
                     
                 elif nombre_archivo.endswith(".docx") and not nombre_archivo.startswith("~$"):
                     doc = docx.Document(ruta_archivo)
+                    
+                    # 1. Extraemos los párrafos normales
                     for parrafo in doc.paragraphs:
-                        texto_completo += parrafo.text + "\n"
+                        if parrafo.text.strip():
+                            texto_completo += parrafo.text + "\n"
+                    
+                    # 2. Extraemos la información de las TABLAS
+                    for tabla in doc.tables:
+                        for fila in tabla.rows:
+                            # Juntamos cada celda de la fila separada por " | " para que la IA entienda que es una tabla
+                            fila_texto = [celda.text.replace('\n', ' ').strip() for celda in fila.cells if celda.text.strip()]
+                            if fila_texto:
+                                texto_completo += " | ".join(fila_texto) + "\n"
+                        texto_completo += "\n" # Espacio al terminar la tabla
+                        
                     archivos_leidos += 1
-                    print(f"📝 Procesando Word: {nombre_archivo}")
+                    print(f"📝 Procesando Word (con tablas): {nombre_archivo}")
 
             if archivos_leidos > 0:
-                text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=300) 
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=800) 
                 chunks = text_splitter.split_text(texto_completo)
                 
                 # ¡La magia! Se suben todos los vectores a MongoDB
@@ -73,30 +88,27 @@ except Exception as e:
 # 3. LAS HERRAMIENTAS
 @tool
 def buscar_en_documentos(pregunta: str) -> str:
-    """
-    Utiliza esta herramienta SIEMPRE para buscar información sobre el reglamento, 
-    listas de útiles, lecturas complementarias o profesores.
-    """
-    # Rastreador para la consola
+    """Úsala para buscar información sobre reglamentos, útiles, lecturas o profesores."""
     print(f"🚨 EL AGENTE ESTÁ BUSCANDO EN MONGO: {pregunta}") 
-    
-    docs = vectorstore.similarity_search(pregunta, k=5)
+    docs = vectorstore.similarity_search(pregunta, k=3)
     contexto_encontrado = "\n\n".join(doc.page_content for doc in docs)
+    
+    # 👇 RAYO X: Vemos si Mongo realmente devuelve texto
+    print(f"📦 MONGO DEVOLVIÓ {len(docs)} DOCUMENTOS CON {len(contexto_encontrado)} CARACTERES.")
+    
+    if len(contexto_encontrado) == 0:
+        return "No se encontró información en la base de datos."
     return contexto_encontrado
 
 @tool
 def consultar_web_colegio() -> str:
-    """
-    Utiliza esta herramienta EXCLUSIVAMENTE cuando necesites buscar información de contacto, 
-    teléfonos, correos electrónicos, dirección o información general del colegio.
-    """
-    # Rastreador para la consola
+    """Úsala para buscar teléfonos, correos electrónicos, dirección o contacto."""
     print("🚨 EL AGENTE ESTÁ LEYENDO LA PÁGINA WEB OFICIAL") 
     
-    url = "https://www.redwoodcollege.cl/contacto" 
+    url = "https://www.redwoodcollege.cl/" 
     try:
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
             'Accept-Language': 'es-ES,es;q=0.9'
         }
         respuesta = requests.get(url, headers=headers, timeout=10)
@@ -105,10 +117,14 @@ def consultar_web_colegio() -> str:
         soup = BeautifulSoup(respuesta.text, 'html.parser')
         texto_limpio = soup.get_text(separator=' ', strip=True)
         
-        if len(texto_limpio) < 50:
-            return "Error: Pude entrar a la web, pero el texto está oculto o protegido."
-            
-        return f"Información extraída de la web oficial: {texto_limpio[:3000]}"
+        # 👇 RAYO X: Vemos si la web devuelve texto
+        print(f"🌐 LA WEB DEVOLVIÓ {len(texto_limpio)} CARACTERES.") 
         
+        if len(texto_limpio) < 50:
+            return "Error: Pude entrar a la web, pero el texto está oculto."
+            
+        return f"Información de la web: {texto_limpio[:3000]}"
     except Exception as e:
-        return f"No se pudo acceder a la página web. Error: {e}"
+        error_msg = f"No se pudo acceder a la página web. Error: {e}"
+        print(f"❌ ERROR WEB: {error_msg}")
+        return error_msg

@@ -13,7 +13,7 @@ if "mensajes" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [] 
 if "thread_id" not in st.session_state:
-    st.session_state.thread_id = str(uuid.uuid4()) # 🚀 NUEVO: ID de sesión único
+    st.session_state.thread_id = str(uuid.uuid4()) 
 
 # 3. Barra lateral
 st.sidebar.header("⚙️ Configuración del Sistema")
