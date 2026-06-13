@@ -1,0 +1,42 @@
+[
+    {
+        "fecha": "2026-06-12",
+        "hora": "19:52:24",
+        "pregunta": "Hola, ¿cómo estás?",
+        "latencia_segundos": 0.58,
+        "tokens_totales": 793,
+        "exitoso": true
+    },
+    {
+        "fecha": "2026-06-12",
+        "hora": "19:52:44",
+        "pregunta": "Dame los útiles escolares de primero básico",
+        "latencia_segundos": 3.65,
+        "tokens_totales": 4263,
+        "exitoso": true
+    },
+    {
+        "fecha": "2026-06-12",
+        "hora": "19:52:58",
+        "pregunta": "¿Cuál es el teléfono del colegio?",
+        "latencia_segundos": 2.04,
+        "tokens_totales": 5313,
+        "exitoso": true
+    },
+    {
+        "fecha": "2026-06-12",
+        "hora": "19:53:22",
+        "pregunta": "Dame una receta para hacer pan",
+        "latencia_segundos": 16.05,
+        "tokens_totales": 5424,
+        "exitoso": true
+    },
+    {
+        "fecha": "2026-06-12",
+        "hora": "19:57:38",
+        "pregunta": "Hola",
+        "latencia_segundos": 0.53,
+        "tokens_totales": 783,
+        "exitoso": true
+    }
+]

@@ -2,6 +2,8 @@ import streamlit as st
 import uuid
 from langchain_core.messages import AIMessage, HumanMessage
 from src.agent import inicializar_agente
+import time
+from src.logger import registrar_metrica 
 
 # 1. Configuración de la página
 st.set_page_config(page_title="Agente Redwood", page_icon="🕵️‍♂️")
@@ -29,7 +31,7 @@ if groq_api_key:
     if st.sidebar.button("🗑️ Resetear Memoria del Agente"):
         st.session_state.mensajes = []
         st.session_state.chat_history = []
-        st.session_state.thread_id = str(uuid.uuid4()) # 🚀 ¡Mata la memoria vieja y crea una nueva!
+        st.session_state.thread_id = str(uuid.uuid4())
         st.rerun()
 
     st.markdown("---")
@@ -40,34 +42,49 @@ if groq_api_key:
             st.markdown(mensaje["content"])
 
     # 6. Interacción: Cuando el usuario escribe algo
-    if pregunta := st.chat_input("Escribe tu consulta o saluda al agente..."):
-        
-        # Mostrar la pregunta visualmente
-        st.session_state.mensajes.append({"role": "user", "content": pregunta})
+    if prompt := st.chat_input("Escribe tu consulta..."):
+        # 1. Mostramos el mensaje del usuario (AHORA SÍ CON INDENTACIÓN)
+        st.session_state.mensajes.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
-            st.markdown(pregunta)
+            st.markdown(prompt)
 
-        # Preparar la memoria cognitiva para LangGraph
-        st.session_state.chat_history.append(HumanMessage(content=pregunta))
+        # 2. Iniciamos el cronómetro ⏱
+        inicio_tiempo = time.time()
+        hubo_error = False
+        tokens_usados = 0
 
-        # El Agente evalúa, decide usar herramientas y responde
         with st.chat_message("assistant"):
-            with st.spinner("Pensando y tomando decisiones..."):
-                try:
-                    config_memoria = {"configurable": {"thread_id": st.session_state.thread_id}}
-                    
-                    respuesta = agente_ejecutor.invoke(
-                        {"messages": [HumanMessage(content=pregunta)]}, 
-                        config_memoria
-                    )
-                    
-                    mensaje_ia = respuesta["messages"][-1]
-                    texto_respuesta = mensaje_ia.content
-                    
-                    st.markdown(texto_respuesta)
-                    st.session_state.mensajes.append({"role": "assistant", "content": texto_respuesta})
+            try:
+                #  Llamamos al agente (Corrección: agente_ejecutor y thread_id dinámico)
+                config = {"configurable": {"thread_id": st.session_state.thread_id}}
+                respuesta_agente = agente_ejecutor.invoke({"messages": [("user", prompt)]}, config)
+                
+                # Extraemos el mensaje final
+                ultimo_mensaje = respuesta_agente["messages"][-1]
+                respuesta_texto = ultimo_mensaje.content
+                
+                # EXTRAEMOS LA MÉTRICA DE TOKENS (Uso de recursos)
+                if hasattr(ultimo_mensaje, 'response_metadata'):
+                    tokens_usados = ultimo_mensaje.response_metadata.get("token_usage", {}).get("total_tokens", 0)
 
-                except Exception as e:
-                    st.error(f"Error en la ejecución del Agente: {e}")
+                st.markdown(respuesta_texto)
+                st.session_state.mensajes.append({"role": "assistant", "content": respuesta_texto})
+                
+            except Exception as e:
+                hubo_error = True
+                st.error(f"Error de conexión: {e}")
+                respuesta_texto = f"Error: {e}"
+
+        # 3. Detenemos el cronómetro y calculamos latencia 
+        fin_tiempo = time.time()
+        latencia = fin_tiempo - inicio_tiempo
+
+        # 4. Guardamos todo en nuestro archivo de logs silenciosamente 
+        registrar_metrica(
+            pregunta=prompt,
+            latencia_segundos=latencia,
+            tokens_totales=tokens_usados,
+            hubo_error=hubo_error
+        )
 else:
     st.warning("👈 Por favor, ingresa tu API Key de Groq para despertar al Agente.")
