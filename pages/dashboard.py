@@ -19,11 +19,13 @@ if os.path.exists(LOG_FILE):
     df = pd.DataFrame(data)
 
     # 1. KPIs (Métricas Clave)
-    st.subheader("📈 Indicadores Generales")
+    st.subheader("Indicadores Generales")
     col1, col2, col3, col4 = st.columns(4)
     
     total_consultas = len(df)
-    latencia_promedio = df["latencia_segundos"].mean()
+    
+    latencia_promedio = df["latencia_total_segundos"].mean()
+    
     max_tokens = df["tokens_totales"].max()
     tasa_exito = (df["exitoso"].sum() / total_consultas) * 100
 
@@ -38,8 +40,8 @@ if os.path.exists(LOG_FILE):
     col_graf1, col_graf2 = st.columns(2)
 
     with col_graf1:
-        st.subheader("⏱️ Latencia por Consulta (Segundos)")
-        st.line_chart(df["latencia_segundos"])
+        st.subheader("Latencia por Consulta (Segundos)")
+        st.line_chart(df["latencia_total_segundos"])
 
     with col_graf2:
         st.subheader("🪙 Consumo de Tokens (Memoria Cognitiva)")
@@ -49,7 +51,12 @@ if os.path.exists(LOG_FILE):
 
     # 3. Trazabilidad de Logs
     st.subheader("📋 Registro Detallado de Trazabilidad (Logs)")
-    st.dataframe(df, use_container_width=True)
+    
+    df_mostrar = df.copy()
+    if "trazabilidad_interna" in df_mostrar.columns:
+        df_mostrar["trazabilidad_interna"] = df_mostrar["trazabilidad_interna"].astype(str)
+        
+    st.dataframe(df_mostrar, use_container_width=True)
 
 else:
-    st.warning("⚠️ No se encontró el archivo de logs. Ve a la página principal y hazle preguntas al agente para generar datos.")
+    st.warning("No se encontró el archivo de logs. Ve a la página principal y hazle preguntas al agente para generar datos.")
